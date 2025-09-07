@@ -2,7 +2,7 @@ package lock
 
 import (
 	"fmt"
-	//	"log"
+	// "log"
 	"strconv"
 	"testing"
 	"time"
@@ -22,10 +22,13 @@ func oneClient(t *testing.T, me int, ck kvtest.IKVClerk, done chan struct{}) kvt
 	lk := MakeLock(ck, "l")
 	ck.Put("l0", "", 0)
 	for i := 1; true; i++ {
+		// log.Printf("%d in %d", me, i)
 		select {
 		case <-done:
+			// log.Printf("%d done with %d", me, i)
 			return kvtest.ClntRes{i, 0}
 		default:
+			// log.Printf("%d in default %d", me, i)
 			lk.Acquire()
 
 			// log.Printf("%d: acquired lock", me)
@@ -57,6 +60,8 @@ func oneClient(t *testing.T, me int, ck kvtest.IKVClerk, done chan struct{}) kvt
 			lk.Release()
 		}
 	}
+
+	// log.Printf("%d done with %d", me, 0)
 	return kvtest.ClntRes{}
 }
 
