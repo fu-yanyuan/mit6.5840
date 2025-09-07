@@ -38,8 +38,6 @@ func MakeLock(ck kvtest.IKVClerk, l string) *Lock {
 }
 
 func (lk *Lock) Acquire() {
-	// lk.mu.Lock()
-	// defer lk.mu.Unlock()
 	// Your code here
 	// keep trying to acquire the lock
 	// fmt.Printf("== %v try to acquire the key \n", lk.clientID)
@@ -82,28 +80,27 @@ func (lk *Lock) Acquire() {
 	}
 }
 
-func (lk *Lock) Release() {
-	// lk.mu.Lock()
-	// defer lk.mu.Unlock()
-	
+func (lk *Lock) Release() {	
 	// Your code here
-	// fmt.Printf("== %v try to release the key \n", lk.clientID)
-	val, ver, err := lk.ck.Get(lk.lockKey)
-	// log.Printf("== %v get (%v, %v, %v) \n", lk.clientID, val, ver, err)
-	if err != rpc.OK {
-		return
-		// log.Fatalf("lock key not found")
-	}
+	for {
+		val, ver, err := lk.ck.Get(lk.lockKey)
+		// if `Get()` is not OK
+		// continue to next loop to Get() again
+		if err != rpc.OK {
+			continue
+		}
 
-	if val != lk.clientID {
-		return
-		// log.Fatalf("lock held by another client")
-	}
+		// only when `Get()` is OK
+		// already locked by other client. no need to release. return
+		if val != lk.clientID {
+			return
+		}
 
-	// err == rpc.OK && val == lk.lockKey
-	putErr := lk.ck.Put(lk.lockKey, "", ver)
-	if putErr != rpc.OK {
-		log.Fatalf("lk.ck.Put Err: %v", putErr)
+		// err == rpc.OK && val == lk.lockKey
+		putErr := lk.ck.Put(lk.lockKey, "", ver)
+		if putErr == rpc.OK {
+			// only return when successfully put
+			return
+		}
 	}
-	// fmt.Printf("== %v released the key \n", lk.clientID)
 }
