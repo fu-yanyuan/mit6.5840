@@ -3,7 +3,6 @@ package lock
 import (
 	"log"
 	"time"
-	// "fmt"
 	"sync"
 
 	"6.5840/kvtest1"
@@ -39,30 +38,39 @@ func MakeLock(ck kvtest.IKVClerk, l string) *Lock {
 }
 
 func (lk *Lock) Acquire() {
-	lk.mu.Lock()
-	defer lk.mu.Unlock()
+	// lk.mu.Lock()
+	// defer lk.mu.Unlock()
 	// Your code here
 	// keep trying to acquire the lock
 	// fmt.Printf("== %v try to acquire the key \n", lk.clientID)
 	for {
-		val, _, err := lk.ck.Get(lk.lockKey)
+		id, ver, err := lk.ck.Get(lk.lockKey)
 		// fmt.Printf("val = %v, err = %v \n", val, err)
+		// log.Printf("== %v try to acquire the key, but get (%v, %v, %v) \n", lk.clientID, id, ver, err)
 
 		if err == rpc.ErrNoKey {
 			// no such key, we can lock it
 			putErr := lk.ck.Put(lk.lockKey, lk.clientID, 0)
 			if putErr == rpc.OK {
+				// log.Printf("== %v put successfully, %v \n", lk.clientID, err)
 				return
+			} else {
+				// log.Printf("Put (%v, %v, %v) failed. Err: %v", lk.lockKey, lk.clientID, 0, putErr)
+				time.Sleep(10 * time.Millisecond)
 			}
 		} else if err == rpc.OK {
 			// no one is holding this key, we can lock it
-			if val == "" {
-				if lk.ck.Put(lk.lockKey, lk.clientID, 0) == rpc.OK {
+			if id == "" {
+				if lk.ck.Put(lk.lockKey, lk.clientID, ver) == rpc.OK {
+					// log.Printf("== %v put successfully, %v \n", lk.clientID, err)
 					return
+				} else {
+					// log.Printf("Put (%v, %v, %v) failed.", lk.lockKey, lk.clientID, ver)
+					time.Sleep(10 * time.Millisecond)
 				}
 			}
 			// or we already locked
-			if val == lk.clientID {
+			if id == lk.clientID {
 				return
 			}
 
@@ -75,18 +83,19 @@ func (lk *Lock) Acquire() {
 }
 
 func (lk *Lock) Release() {
-	lk.mu.Lock()
-	defer lk.mu.Unlock()
+	// lk.mu.Lock()
+	// defer lk.mu.Unlock()
 	
 	// Your code here
 	// fmt.Printf("== %v try to release the key \n", lk.clientID)
 	val, ver, err := lk.ck.Get(lk.lockKey)
+	// log.Printf("== %v get (%v, %v, %v) \n", lk.clientID, val, ver, err)
 	if err != rpc.OK {
 		return
 		// log.Fatalf("lock key not found")
 	}
 
-	if val != lk.lockKey {
+	if val != lk.clientID {
 		return
 		// log.Fatalf("lock held by another client")
 	}
