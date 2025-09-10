@@ -19,6 +19,11 @@ import (
 	"6.5840/tester1"
 )
 
+const (
+	LeaderState 	= "Leader"
+	FollowerState 	= "Follower"
+	CandidateState 	= "Candidate"
+)
 
 // A Go object implementing a single Raft peer.
 type Raft struct {
@@ -31,16 +36,23 @@ type Raft struct {
 	// Your data here (3A, 3B, 3C).
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
-
+	currentTerm	int
+	votedFor	int
+	state 		string
 }
 
 // return currentTerm and whether this server
 // believes it is the leader.
 func (rf *Raft) GetState() (int, bool) {
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 
 	var term int
 	var isleader bool
 	// Your code here (3A).
+	term = rf.currentTerm
+	isleader = (rf.state == "leader")
+
 	return term, isleader
 }
 
@@ -100,23 +112,44 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 
 }
 
-
+// *************************************************************
+// RequestVote RPC
+// *************************************************************
 // example RequestVote RPC arguments structure.
 // field names must start with capital letters!
 type RequestVoteArgs struct {
 	// Your data here (3A, 3B).
+	Term			int
+	FromCandidate	int
 }
 
 // example RequestVote RPC reply structure.
 // field names must start with capital letters!
 type RequestVoteReply struct {
 	// Your data here (3A).
+
 }
 
 // example RequestVote RPC handler.
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (3A, 3B).
+	// a server (let's say S) ask me to vote for it.
+	// if S's term > mine, then I should vote for it
+	// else S's term <= mine, then reject
+	
 }
+
+// *************************************************************
+// AppendEntries RPC
+// *************************************************************
+// for lab 3A
+// this is also used as heartbeat with empty arguments
+type AppendEntriesArgs {}
+
+type AppendEntriesReply {}
+
+func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) {}
+
 
 // example code to send a RequestVote RPC to a server.
 // server is the index of the target server in rf.peers[].
@@ -198,12 +231,18 @@ func (rf *Raft) ticker() {
 
 		// Your code here (3A)
 		// Check if a leader election should be started.
-
+		// trigger case: if I haven't received any 
 
 		// pause for a random amount of time between 50 and 350
 		// milliseconds.
 		ms := 50 + (rand.Int63() % 300)
 		time.Sleep(time.Duration(ms) * time.Millisecond)
+	}
+}
+
+func (rf *Raft) heartbeat() {
+	for rf.killed() == false {
+		
 	}
 }
 
@@ -222,6 +261,10 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.peers = peers
 	rf.persister = persister
 	rf.me = me
+	// 3A
+	rf.currentTerm	= 0
+	rf.votedFor		= -1  // peers[votedFor]
+	rf.state		= FollowerState
 
 	// Your initialization code here (3A, 3B, 3C).
 
